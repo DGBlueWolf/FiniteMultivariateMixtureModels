@@ -1,0 +1,135 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+
+\newcommand{\given}{\vert}
+\newcommand{\pr}[1]{\text{Pr}\f{#1}}
+\newcommand{\f}[1]{\left(#1\right)}
+\newcommand{\gammf}[1]{\text{Gamma}\f{#1}}
+
+\author{Noah Brubaker}
+\title{Snow Density Parameterization through Correlation of Snow Diameter-Velocity (D/V) Distributions and Snow Water Equivalent (SWE) Time Series using a 2-D Gamma Mixture Model}
+
+\begin{document}
+\maketitle
+
+\section*{Abstract}
+ Parameterizing snow density is important for estimating snowfall from radar. This project will explore how the observed diameter-velocity (D/V) information provided by video disdrometers like the Particle Imaging Package (PIP) can be matched with observed Snow-Water Equivalent (SWE) rates from a weighting bucket guage. The D/V relationships are parameterized using physical hypotheses about the size and shape of falling snow, building off the work of previous authors (Huang et. al., 2014). The physical hypothoses includes the following where $D$ is the apparent diameter, $v$ is the apparent volume, $c_i$ is the snowflake class, $\rho$ is the density, and $V$ is velocity,
+  \begin{align}
+    v &\propto D^3\\
+    \rho &\propto \frac{1}{D^b}, b \in [0.7,1.0]\\
+    V &\propto D^{0.5(1-b)}
+  \end{align}
+  \\
+  Snowflakes typically have a few distinct classes of shapes. For each of these shapes, a different characteristic D/V relationship is expected, as are different instrument specific parameters for extracting density. A 2-dimensional Gamma-based mixture model (over D/V space) is applied to estimate the mixture of classes for a particular observation. The mixture model is learned by the Expectation Maximization algorithm. Convergence of the algorithm is shown for the exponential family of probability distributions, which includes the Gamma distribution (Wu, 1983). The mixture coefficients found via this method are assumed to be proportional to the number of snowflakes in the corresponding classes. A general description follows.
+  \begin{align}
+    \pr{D~\given~c_i} &\propto \gammf{\alpha_{d,c_i},\beta_{d,c_i}}\\
+    \pr{V~\given~D, c_i} &\propto \gammf{\alpha_{v,c_i}(D),\beta_{v,c_i}(D)}\\
+    \pr{D,V~\given~\pi_1,\ldots,\pi_k} &= \sum_{i=1}^{k}\pi_i\pr{D~\given~c_i}\pr{V~\given~D,c_i}
+  \end{align}
+  \\
+  This document will begin with an introduction to snowflakes and snowfall measurement which will briefly cover the different snowflake shape classes, and the conditions which tend to produce them as well as instruments used in measuring them in-situ. Next the snowflake D/V mixture model will be described, including a discussion of the EM algorithm and an argument for convergence for our particular implementation. Finally we will show how the parameters discovered by the mixture model can be used to improve estimation of SWE with some preliminary results.
+  
+\section{Introduction}
+This project is the second part of a two part research project done during an internship at NASA Goddard Space Flight Center in the Mesoscale Atmospheric Processes Lab for Ali Tokay. The project was in support of the Global Precipitation Measurment Mission. The first part of the project was validation of snow detection algorithms for ground based radars which are used to validate the GPM snow detection product. The second part, the subject of this paper, is on the parameterization of snow density. GPM algorithm developers need information about the microphysical characteristics of falling snow including snow density and D/V distributions to make better precipitation estimates and predictions. This paper will address both of these characteristics.
+
+\subsection{Objective}
+The objective of this paper is to define an empirical D/V model for snow and investigate the correlation of those parameters with measured snow-water equivalent and environmental factors. Such a model would allow parameterization of snow density which, with the D/V model, satisfy the requirements of the project.
+
+\subsection{Layout}
+The "Project Background" section will discuss the Global Precipitation Measurement (GPM) Mission and the work that was done for snow detection algorithm validation related to Part One of this research project. The "Scientific Background" section discusses information relevant to Part Two including measurement and instrumentation, physical properties of snowflakes, and related work on the physical properties of falling snow, especially snow density, which form the foundation for the model. The "Methods" section will discuss the elements used in the model as well as the model itself. The paper concludes with some preliminary results and observations that can be made from them.
+
+\section{Project Background}
+\subsection{Global Precipitation Measurement Mission}
+The GPM Mission investigates global precipitation patterns through rain and snow observations provided by its core satellite and a network of satellites world-wide. The core satellite launched on February 27th, 2014 (Dunbar 2016). 
+\\\\
+The GPM core satellite features advanced instrumentation including the GPM Microwave Imager (GMI) and Dual Frequency Polarimetric Radar (DPR). The GMI covers a wide range of frequencies from 10 GHz to 183 GHz and captures a 904km swath with a resolution of 15km. GMI estimates the amount of precipitation throughout a cloud and helps improve precipitation retrievals (Dunbar 2016). 
+\\\\
+The DPR operates at two frequencies 13.6 GHz and 35.5 GHz and captures a 245km and 120km swath respectively. The wavelength of these radars is close to the diameter of the precipitation being measured and will respond differently to equally sized hydrometeors. The difference between the signals provides information about the size distribution of the falling hydrometeors. Relationships like these reflect how our understanding of the micro-physical characteristics of falling hydrometeors allows us to access the wealth of information the GPM satellites can potentially provide (Dunbar 2016). 
+\\\\
+The Mission will contribute to our understanding of global water and energy cycles, advance our capabilities for studying and measuring precipitation on a global scale, and improve forecasting of extreme weather events directly benefiting society (Dunbar 2016).
+
+\subsection{Part One Brief: Snow Detection}
+
+\section{Scientific Background}
+\subsection{Measurement of Falling Snow}
+\subsection{Measurement Site}
+\subsection{Physical Properties of Snowflakes}
+\subsection{Models for Snow Density}
+
+\section{Methods}
+The source of the variation and lack of correlation between observed SR and SWE by a disdrometer and weighing bucket gauge respectively is the uncertainty measurement of individual particle volume. The optical disdrometers considered in this study produce at best 2-D representation of the particles being measured. This means we have limited information about the true size of the particles being measured. To parameterize snow density effectively, we need to account for these types of errors.
+\\\\
+The error between true and estimated volume is a function of the measured principle diameter. If we can develop an empirical measurement of this function, then density will be easier to parameterize on top of it. 
+\\\\
+The catch however is the true density of a snowflake is itself, not a constant and could be influenced by several environmental factors aloft like temperature and humidity which can be hard to measure. Different crystal densities however will lead to different fall speeds for similar snowflakes.
+\\\\
+Therefore, using size-velocity information in tandem with the SWE should provide the best information about the density of individual snow particles. 
+\\\\
+The final complication is the potential for the volume error function to be multi-modal (a single mean-relationship is insufficient for approximating the error function. Snowflakes take on a number of different shapes and the error in volume estimates with respect to measured size will be different for each shape. For example, a $D^3$ volume relationship will be very descriptive for graupel-like snow, but for plate-like snowflakes $D^2$ would be a much more reasonable relationship. 
+\\\\
+One way to parameterize multi-modal data is to use a mixture model, which probabilistically fits a finite number of distinct distributions that maximize the likelihood function for the model. In the case of snow density, variation in distribution happens over time, so a mixture model is extended to study the entire time series assuming the time correlation in the data can be expressed by the Epanechnikov kernel.
+\\\\
+This section will discuss the empirical snow D/V model in detail from mixture model concepts to implementation details.
+
+\subsection{Finite Mixture Models}
+A mixture model is typically a probabilistic mixture of a finite number, $K$, independent probability distributions. Each distribution typically has the same class, but this is not required. Notated as 
+\begin{align}
+\text{Pr}(x) \approx \text{Pr}( x | f_1, \ldots, f_K, \Theta_1 , \ldots , \Theta_K , \pi_1 , \ldots , \pi_K  ) = \sum_{i=1}^{K}\pi_i  f_i(x | \Theta_i)
+\end{align}
+where $\Theta_i$ is a set of parameters for the $i^{th}$ distribution function, $f_i$, and $\pi_i$ the mixing fraction with $\sum_{i=1}^K \pi_i = 1$. A mixture model is related to kernel density estimation, except that $K$ independent kernels are used to estimate the pdf instead of one standard kernel per data point. 
+\\\\
+Solving this by maximum likelihood directly can be difficult or impossible because we have incomplete data; the mixing fractions are typically not known before hand. The most common way to overcome this problem is by using the iterative Expectation Maximization algorithm.
+
+\subsection{Expectation Maximization (EM) Algorithm}
+The EM Algorithm solves the limited information maximum likelihood problem. A general way to describe this problem is given two related spaces $\mathcal{X}$ whose elements have the form of the desired information, and $\mathcal{Y}$ whose elements describe the observed information. We'll assume there is also an injective point-to-set mapping $\Phi: \mathcal{Y} \rightarrow \mathcal{P}(\mathcal{X}) $ which describes the set of instances of desired information, $x$, that could have non-zero probability given an observation $y$. Using the mixture model as an example, we do not know from what components an observation $y$ came from. The desired information has the form $$x = \left( ~ y ~ , ~ \text{Pr}( f_1, \Theta_1 \given ~ y )~,\ldots ,~\text{Pr}( f_K, \Theta_K \given ~ y )~\right).$$
+In this case $$\Phi(y) = \left\{ ( y , p_1 , \ldots , p_K ) : ~p_i \geq 0~,~ \sum_{i=1}^K p_i = 1\right\}.$$
+We begin by defining a prior distribution over the desired information space $\mathcal{X}$, $f(x|\Theta)$. Here, $\Theta$ represents all parameters for the assumed prior distribution function. Using the mixture model example, it is the set of tuples of parametric pdfs, corresponding parameters, and mixing fractions, $(f_i, \Theta_i, \pi_i) \in \Theta$. Given the observed sample $Y \subset \mathcal{Y}$, we'll define the likelihood of our current fit as follows
+\begin{align}
+L(\Theta) = \text{E}\left(\log\sum_{x \in \phi(y)} f(x \given \Theta) ~\bigg\given~y \in Y \right).
+\end{align} 
+It isn't terribly useful to maximize the log-likelihood with this formulation because the $\log(\Sigma)$ is typically hard to analyze. To overcome this problem the EM algorithm makes a clever use of Jenson's inequality. Jenson's inequality states that for a concave function $\varphi$, 
+\begin{align}
+\varphi(\text{E}(X)) \geq \text{E}(\varphi(X))
+\end{align}
+Since the logarithm is concave on it's domain, we'll apply Jensen's inequality to our log-likelihood function by multiplying and dividing $f(x \given \Theta)$ by a pdf, $g: \Phi(y) \rightarrow [0,1]$, defined for each observation, $y$.
+\begin{align}
+\log \sum_{x \in \Phi(y)} f(x \given \Theta) &= \log \sum_{x \in \Phi(y)} g(x)\frac{ f(x \given \Theta) }{g(x)}\\
+&= \log \text{E}\left( \frac{ f(x \given \Theta) }{g(x)} \bigg\given g(x)\right), x \in \Phi(y)\\
+&\geq E\left( \log \frac{ f(x \given \Theta) }{g(x)} \bigg\given g(x)\right), x \in \Phi(y) ~(\text{by Jensen's inequality.})\\
+&= \sum_{x \in \Phi(y)} g(x) \log \frac{ f(x \given \Theta) }{g(x)} = G(\Theta, y \given g)
+\end{align}
+A nice property of this result is that it is easy to find $g(x)$ that ensures equality, namely
+\begin{align}
+g(x) = \frac{ f(x \given \Theta) }{ \sum_{x \in \Phi(y)} f(x \given \Theta) }, x \in \Phi(y).
+\end{align} 
+After substituting this into equation 13, the reader should be easily be able to verify that this is true. 
+\\\\
+With these tools in hand we can now define the two steps in the algorithm. The superscript in parentheses, $\square^{(t)}$, is the value of the element on the $t^{th}$ step of the algorithm.
+\\\\
+\textbf{E-Step}
+\begin{align}
+g^{(t)}(x \given y) \gets \dfrac{ f(x \given \Theta) }{ \sum_{x \in \Phi(y)} f(x \given \Theta^{(t)}) }, x \in \Phi(y), y \in \mathcal{Y}
+\end{align}
+\\
+\textbf{M-Step}
+\begin{align}
+	\Theta^{(t+1)} \gets \underset{\Theta}{\text{argmax}}{\displaystyle{\sum_{y \in \mathcal{Y}}G(\Theta, y \given g^{(t)})}}
+\end{align}
+
+\subsubsection{Convergence}
+
+\subsubsection{Alternatives}
+\subsection{A Mixture Model for Snow D/V Distributions}
+\subsection{Gamma Parameter Updates}
+\subsection{Application to Time Series}
+\section{Preliminary Results}
+\section{Conclusion}
+
+\end{document}
