@@ -8,8 +8,8 @@ config = {
 
     #print format
     'printformat': {
-        'f8': '{:.6g}',
-        'i4': '{:.6g}',
+        'f8': '{:12.6g}',
+        'i4': '{:8d}',
         'separator': ',',
     },
 
@@ -24,7 +24,7 @@ config = {
         }, base = home + 'src/read', ext = ".py"),
 
         'computers': base.specfiles({
-            'compressed_particle_data': 'compress_particle_data'
+            'compressed_particle_data': 'compress_particle_data',
             'computed_snow_rate':  'compute_dvd_from_particles',
             'computed_area_ratio': 'compute_mean_area_ratio_from_particles',
         }, base = home + 'src/compute', ext = '.py'),
@@ -171,7 +171,8 @@ config = {
                 (('Time','t'),'i4'),
                 (('Cluster Diameter','d'),'f8'),
                 (('Cluster Velocity','v'),'f8'),
-                (('Particle SnowRate','sr'),'f8'),
+                (('Cluster SnowRate','sr'),'f8'),
+                (('Cluster Varaince','var'),'f8'),
             ],
             'files': base.specfiles({
                 'r1': 'clustersr20131209',
