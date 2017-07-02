@@ -24,6 +24,7 @@ config = {
         }, base = home + 'src/read', ext = ".py"),
 
         'computers': base.specfiles({
+            'model_dv_distribution': 'model_dv_distribution',
             'compressed_particle_data': 'compress_particle_data',
             'computed_snow_rate':  'compute_dvd_from_particles',
             'computed_area_ratio': 'compute_mean_area_ratio_from_particles',
@@ -44,6 +45,7 @@ config = {
         'computed_snow_rate':       'csr',
         'computed_area_ratio':      'car',
         'compressed_particle_data': 'cpd',
+        'model_dv_distribution':    'mdd',
     }, base = home + 'data/shelves/' , ext = '.shelf'),
 
     #MetaData
@@ -162,6 +164,11 @@ config = {
             'e7': 'pd20140317.csv',
             'e8': 'pd20140325-26.csv',
         }, base = home + "data/particle_density/", ext = "")
+    },
+
+    #Modeled D-V Distribution
+    'model_dv_distribution': {
+
     },
 
     #Compressed particle information

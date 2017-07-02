@@ -90,6 +90,7 @@ if not 'data' in shelf:
     shelf.close()
     reader()
 else:
+    print("Reading {} from {}".format('compressed_particle_data','cpd.shelf'))
     data = shelf['data']
     shelf.close()
 del(shelf)
