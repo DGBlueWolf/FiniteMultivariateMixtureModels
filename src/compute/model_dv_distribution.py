@@ -15,19 +15,21 @@ v_alpha_params = ['slope','scale','intercept']
 v_beta_params = ['slope','scale','intercept']
 inkey = 'compressed_pip_data'
 outkey = 'model_dv_distribution'
-events = ['e3',]
+events = names['events']
+minlog = np.exp(-40)
+data = {}
 
 def init_v_alpha():
     return {
-        'slope': np.random.uniform(0.5,5),
-        'scale': np.random.uniform(0.1,1),
-        'intercept': np.random.uniform(0.5,2),
+        'slope': np.random.uniform(3.5,4.5),
+        'scale': np.random.uniform(0.5,1.5),
+        'intercept': np.random.uniform(1,2.5),
     }
 
 def init_v_beta():
     return {
-        'slope': np.random.uniform(0.5,5),
-        'scale': np.random.uniform(0.01,1),
+        'slope': np.random.uniform(1,3),
+        'scale': np.random.uniform(0.5,1.5),
         'intercept': np.random.uniform(2,3.5),
     }
 
@@ -52,7 +54,9 @@ def der_beta_v(d, slope, scale, intercept):
     }
 
 def der_loggamma_alpha( d, alpha, beta ):
-    return np.log(beta*d)-digamma(alpha)
+    tmp = beta*d
+    tmp[ tmp < minlog ] = minlog
+    return np.log( tmp )-digamma(alpha)
 
 def der_loggamma_beta( d, alpha, beta ):
     return alpha/beta - d
@@ -74,11 +78,24 @@ def der_V_beta( d, v, alpha, beta):
 def logmodel( d , v , D , V  ):
     av = alpha_v( d, **V['alpha'] )
     bv = beta_v( d, **V['beta'] )
-    vd = np.log( gamma.pdf( v, av, 0, 1/bv ))
-    return np.log(gamma(D['alpha'],0,1/D['beta']).pdf( d )) + vd
 
-def em( parts , max_iter=1000 , thresh = 0.05 , lr = 0.05 ):
-    parts = parts[ (parts['v'] > 0) & (parts['v'] < 4) ]
+    tmp1 = gamma.pdf( v, av, 0, 1/bv )
+    if len(tmp1.shape) > 0 :
+        tmp1[ tmp1 < minlog ] = minlog
+    elif tmp1 < minlog:
+        tmp1 = minlog
+
+    tmp2 = gamma(D['alpha'],0,1/D['beta']).pdf( d )
+    if len(tmp2.shape) > 0 :
+        tmp2[ tmp2 < minlog ] = minlog
+    elif tmp2 < minlog:
+        tmp2 = minlog
+
+    vd = np.log( tmp1 )
+    return np.log( tmp2 ) + vd
+
+def em( parts , max_iter=500 , thresh = 0.05 , lr = 0.05 , init_ = None):
+    #parts = parts[ (parts['v'] > 0) & (parts['v'] < 4) ]
     done = False
     outtime = np.unique(parts['t'])
     deltas = [{
@@ -105,16 +122,23 @@ def em( parts , max_iter=1000 , thresh = 0.05 , lr = 0.05 ):
     } for _ in range(config.n_feats)]
 
     #initialize parameters somehow
-    for j in range( config.n_feats ):
-        params[j]['D']['alpha'] = np.random.uniform(1,3)
-        params[j]['D']['beta'] = np.random.uniform(2,12)
-        params[j]['V']['alpha'].update( init_v_alpha() )
-        params[j]['V']['beta'].update( init_v_beta() )
+    if init_ is None:
+        for j in range( config.n_feats ):
+            params[j]['D']['alpha'] = np.random.uniform(3,8)
+            params[j]['D']['beta'] = np.random.uniform(1,6)
+            params[j]['V']['alpha'].update( init_v_alpha() )
+            params[j]['V']['beta'].update( init_v_beta() )
+    else:
+        for j in range( config.n_feats ):
+            params[j]['D']['alpha'] = init_[j]['D']['alpha']
+            params[j]['D']['beta'] = init_[j]['D']['beta']
+            params[j]['V']['alpha'].update( init_[j]['V']['alpha'] )
+            params[j]['V']['beta'].update( init_[j]['V']['beta'] )
 
     #define error model parameters
-    pprint( params )
-    if input('Ok? ') == "no":
-        return params
+    #pprint( params )
+    #if input('Ok? ') == "no":
+    #    return params
 
     #define a structure to hold the scores for each model in the mixture
     group_type = [
@@ -123,7 +147,7 @@ def em( parts , max_iter=1000 , thresh = 0.05 , lr = 0.05 ):
         (('Error scores','err'),'{}f8'.format(config.err_feats)),
     ]
     group_scores = np.zeros( len(outtime) , dtype = group_type )
-
+    tsr = 0
     plike = -1.2e100
     for iterc in range( max_iter ):
         new = 0
@@ -155,9 +179,6 @@ def em( parts , max_iter=1000 , thresh = 0.05 , lr = 0.05 ):
 
             likelihood += log_score.sum()
 
-            clear_output(wait=True)
-            print( "Computing scores... Iteration {}/{}. Minute {}/{}. Likelihood: {:12.6g} Change: {:12.6g}".format(iterc + 1,max_iter,i+1,len(outtime),likelihood,likelihood-plike))
-
             log_score -= log_score.mean()
             group_scores[i]['t'] = ts
             group_scores[i]['fs'] = np.exp(log_score)/np.exp(log_score).sum()
@@ -175,37 +196,70 @@ def em( parts , max_iter=1000 , thresh = 0.05 , lr = 0.05 ):
                 for k in v_beta_params:
                     deltas[j]['V']['beta'][k] += factor * np.sum( sr * partder_V_beta[k] )
 
+            clear_output(wait=True)
+            print( "Computing scores... Iteration {}/{}. Minute {}/{}. Likelihood: {:10.6g} Change This Run: {:12.6g}".format(iterc + 1,max_iter,i+1,len(outtime),plike,likelihood-plike))
+            #pprint(deltas)
+
         for j in range( config.n_feats ):
             factor = np.sum( tsr * group_scores['fs'][:,j] )
-            params[j]['D']['alpha'] += deltas[j]['D']['alpha'] / factor
-            params[j]['D']['beta'] += deltas[j]['D']['beta'] / factor
+            factor = 1 if factor < 1 else factor
+            dalpha = deltas[j]['D']['alpha'] / factor
+            dbeta = deltas[j]['D']['beta'] / factor
+
+            #DIAMETER PART
+            if dalpha + 1e-6 < -params[j]['D']['alpha']:
+                params[j]['D']['alpha'] *= 0.5
+            else:
+                params[j]['D']['alpha'] += dalpha
+
+            if dbeta + 1e-6 < -params[j]['D']['beta']:
+                params[j]['D']['alpha'] *= 0.5
+            else:
+                params[j]['D']['beta'] += dbeta
+
+            #VELOCITY PART
             for k in v_alpha_params:
-                params[j]['V']['alpha'][k] += deltas[j]['V']['alpha'][k] / factor
+                valpha = deltas[j]['V']['alpha'][k] / factor
+                if valpha + 1e-6 < -params[j]['V']['alpha'][k]:
+                    params[j]['V']['alpha'][k] *= 0.5
+                else:
+                    params[j]['V']['alpha'][k] += valpha
+                    
             for k in v_beta_params:
-                params[j]['V']['beta'][k] += deltas[j]['V']['beta'][k] / factor
+                vbeta = deltas[j]['V']['beta'][k] / factor
+                if vbeta + 1e-6 < -params[j]['V']['beta'][k]:
+                    params[j]['V']['beta'][k] *= 0.5
+                else:
+                    params[j]['V']['beta'][k] += vbeta
 
-        pprint(params)
-        if (input('Ok? ') == "no") and (likelihood < plike) and (input("Ok? " ) == 'no'):
-            return params
+        #pprint(params)
+        if ( np.isnan(likelihood)  or (likelihood < plike) ) and (input("Ok? " ) == 'no'):
+            pprint(params)
+            break
+
+        if likelihood - plike < thresh*abs(likelihood)/(max_iter-iterc):
+            break
+
         plike = likelihood
-    return params
+    return params, group_scores, ( group_scores['fs'].transpose() * tsr ).transpose()
 
-def reader( max_iter = 1000, lr = 0.05 ):
-    data = {}
+def reader( max_iter = 500, lr = 0.04 ):
+    data = globals()['data']
+    for e in events:
+        data[e] = {}
+        data[e]['params'], data[e]['group_scores'], data[e]['group_sr'] = em( cpd[e][inkey] , max_iter = max_iter , lr = lr )
+
+def save():
     shelf = shelve.open(fconfig['shelves'][outkey])
     shelf.clear()
-
-    for e in events:
-        data[e] = em( cpd[e][inkey] , max_iter = max_iter , lr = lr )
-
-    globals()['data'] = data
-    shelf['data'] = data
+    shelf['data'] = globals()['data']
     shelf.close()
 
 shelf = shelve.open(fconfig['shelves'][outkey])
 if not 'data' in shelf:
     shelf.close()
     reader()
+    save()
 else:
     data = shelf['data']
     shelf.close()
