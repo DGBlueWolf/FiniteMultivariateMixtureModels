@@ -5,10 +5,8 @@ from scipy.special import digamma
 from IPython.display import clear_output
 from scipy.stats import gamma
 from scipy.stats import norm
-import matplotlib.pyplot as plt
 from configs.file_locations import config as fconfig
 import configs.compute.model_dv_distribution as config
-from src.compute.compress_particle_data import data as cpd
 from configs.naming_conventions import config as names
 
 v_alpha_params = ['slope','scale','intercept']
@@ -224,7 +222,7 @@ def em( parts , max_iter=500 , thresh = 0.05 , lr = 0.05 , init_ = None):
                     params[j]['V']['alpha'][k] *= 0.5
                 else:
                     params[j]['V']['alpha'][k] += valpha
-                    
+
             for k in v_beta_params:
                 vbeta = deltas[j]['V']['beta'][k] / factor
                 if vbeta + 1e-6 < -params[j]['V']['beta'][k]:
@@ -244,6 +242,7 @@ def em( parts , max_iter=500 , thresh = 0.05 , lr = 0.05 , init_ = None):
     return params, group_scores, ( group_scores['fs'].transpose() * tsr ).transpose()
 
 def reader( max_iter = 500, lr = 0.04 ):
+    from src.compute.compress_particle_data import data as cpd
     data = globals()['data']
     for e in events:
         data[e] = {}
