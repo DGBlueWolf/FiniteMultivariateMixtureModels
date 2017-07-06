@@ -3,12 +3,11 @@ import numpy as np
 from utilities.base import inset
 from configs.file_locations import config
 from configs.naming_conventions import config as names
-from src.compute.compute_dvd_from_particles import data as partdvsr
-from src.read.read_rr import data as rr
 
 feed = 'computed_area_ratio'
 dkey1 = 'sliding_window_averages'
 dkey2 = 'event_summary'
+data = {}
 
 def get_sliding_window_indices(outtime,slwidth):
     ranges = list() #list of (start,stop)
@@ -41,9 +40,9 @@ def reader():
     equivalent rate.
     Hopefully the computed area ratio is consistent across each event so that this method makes sense.
     '''
-    data = {}
-    shelf = shelve.open(config['shelves'][feed])
-    shelf.clear()
+    from src.compute.compute_dvd_from_particles import data as partdvsr
+    from src.read.read_rr import data as rr
+    data = globals()['data']
 
     data[dkey1] = {}
     data[dkey2] = {}
@@ -89,14 +88,17 @@ def reader():
         data[dkey1][e] = slwav
         data[dkey2][e] = eva
 
-    globals()['data'] = data
-    shelf['data'] = data
+def save():
+    shelf = shelve.open(config['shelves'][feed])
+    shelf.clear()
+    shelf['data'] = globals()['data']
     shelf.close()
 
 shelf = shelve.open(config['shelves']['computed_area_ratio'])
 if not 'data' in shelf:
     shelf.close()
     reader()
+    save()
 else:
     data = shelf['data']
     shelf.close()

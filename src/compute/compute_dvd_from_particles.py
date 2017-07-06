@@ -1,9 +1,6 @@
 import numpy as np
 import shelve
 from src.read.read_meta import data as meta
-from src.read.read_vd import data as vd
-from src.read.read_ssd import data as ssd
-from src.read.read_particle_density import data as pd
 from configs.file_locations import config
 from utilities.base import inset
 from configs.naming_conventions import config as names
@@ -12,6 +9,7 @@ fileinfo = config['computed_snow_rate']
 pipbins = meta['pip_bin_centers']['bins']['bins'][0]
 pipwindow = meta['pip_info']['pipinfo']['window'][0]
 events = names['events']
+data = {}
 
 def calc_snowrate_part( d , v ):
     x,y = pipwindow
@@ -23,9 +21,11 @@ def calc_snowrate_vdssd( vd , ssd ):
     return np.sum(np.pi*6e-4*delta*(vd*ssd)*pipbins**3,1)
 
 def reader():
-    data = {}
-    shelf = shelve.open(config['shelves']['computed_snow_rate'])
-    shelf.clear()
+    from src.read.read_vd import data as vd
+    from src.read.read_ssd import data as ssd
+    from src.read.read_particle_density import data as pd
+    data = globals()['data']
+
     #Register computed data in config file, specify format there.
     for e in events:
         data[e] = {}
@@ -94,8 +94,10 @@ def reader():
         data[e][key2]['bd'] = partsrmintot['rhoS']
         data[e][key2]['sr'] = ssdsr
 
-    globals()['data'] = data
-    shelf['data'] = data
+def save():
+    shelf = shelve.open(config['shelves']['computed_snow_rate'])
+    shelf.clear()
+    shelf['data'] = globals()['data']
     shelf.close()
 
 def write_pip_particle_snowrate():
@@ -116,6 +118,7 @@ shelf = shelve.open(config['shelves']['computed_snow_rate'])
 if not 'data' in shelf:
     shelf.close()
     reader()
+    save()
 else:
     data = shelf['data']
     shelf.close()

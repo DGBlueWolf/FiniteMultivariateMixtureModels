@@ -2,7 +2,6 @@ import numpy as np
 from IPython.display import clear_output
 import sys
 import shelve
-from src.compute.compute_dvd_from_particles import data as partdvsr
 from sklearn.cluster import KMeans
 from configs.file_locations import config
 from utilities.base import inset
@@ -11,11 +10,11 @@ from configs.naming_conventions import config as names
 events = names['events']
 fileinfo = config['compressed_particle_data']
 npoints = 100
+data = {}
 
 def reader():
-    data = {}
-    shelf = shelve.open(config['shelves']['compressed_particle_data'])
-    shelf.clear()
+    from src.compute.compute_dvd_from_particles import data as partdvsr
+    data = globals()['data']
     psrkey = 'pip_particle_snowrate'
     ssdkey = 'pip_ssd_snow_rate'
     outkey = 'compressed_pip_data'
@@ -72,8 +71,10 @@ def reader():
         data[e][outkey]['sr'] = np.concatenate( bytime['sr'] )
         data[e][outkey]['var'] = np.concatenate( bytime['var'] )
 
-    globals()['data'] = data
-    shelf['data'] = data
+def save():
+    shelf = shelve.open(config['shelves']['compressed_particle_data'])
+    shelf.clear()
+    shelf['data'] = globals()['data']
     shelf.close()
 
 def writer(key = 'compressed_pip_data'):
@@ -89,6 +90,7 @@ shelf = shelve.open(config['shelves']['compressed_particle_data'])
 if not 'data' in shelf:
     shelf.close()
     reader()
+    save()
 else:
     print("Reading {} from {}".format('compressed_particle_data','cpd.shelf'))
     data = shelf['data']
