@@ -40,12 +40,13 @@ def reader():
             tmpt = partdvsr[e][psrkey][old:new]
             dv = np.concatenate( (tmpt['d'].reshape(-1,1),tmpt['v'].reshape(-1,1)), axis = 1)
             if new - old <= npoints:
-                total += new-old
+                continue
+                '''total += new-old
                 bytime['t'][i] = np.repeat([ts],new-old).reshape(-1)
                 bytime['d'][i] = np.array(dv[:,0]).reshape(-1)
                 bytime['v'][i] = np.array(dv[:,1]).reshape(-1)
                 bytime['sr'][i] = tmpt['sr'].reshape(-1)
-                bytime['var'][i] = np.repeat([0],new-old).reshape(-1)
+                bytime['var'][i] = np.repeat([0],new-old).reshape(-1)'''
             else:
                 total += npoints
                 bytime['t'][i] = np.repeat([ts],npoints).reshape(-1)

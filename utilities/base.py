@@ -1,6 +1,10 @@
 import os,re,sys,collections
 import numpy as np
 
+def setattrs(_self, **kwargs):
+    for k,v in kwargs.items():
+        setattr(_self, k, v)
+        
 def get_sliding_window_indices(outtime,slwidth):
     ranges = list() #list of (start,stop)
     idx,start = 0,outtime[0]
@@ -23,7 +27,7 @@ def window_sums(arr,ranges_in,axis=None):
     shape[axis or 0] = 1
     ans = np.append(np.zeros(shape),arr.cumsum(axis),axis)
     return ans.take(ranges[:,1],axis) - ans.take(ranges[:,0],axis)
-    
+
 def inset(t , tset):
     return np.vectorize(lambda t: t in tset)(t)
 
