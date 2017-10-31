@@ -85,8 +85,7 @@ def em(parts, max_iter=500, tol=1e-6, theta=0.1, batches=16, init_=None):
                 if batch_counter[j] > batch_goal[j]:
                     clear_output(wait=True)
                     mxmodel[j].step()
-                    print(
-                    "Computing scares... Iteration {}/{}. Minute {:4d}/{:4d}. Likelihood: {:10.6g} Mean Change: {:12.6g}".format(
+                    print( "Computing scares... Iteration {}/{}. Minute {:4d}/{:4d}. Likelihood: {:10.6g} Mean Change: {:12.6g}".format(
                         iterc + 1, max_iter, minute, len(outtime), plike, meanchange))
                     batch_counter[j] = 0.0
 
