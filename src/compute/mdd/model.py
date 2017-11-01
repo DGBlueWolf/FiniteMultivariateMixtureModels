@@ -27,14 +27,14 @@ class Model(dict):
 
     def construct(self, x):
         L = len(self.params)
-        for k, x in zip(self.params, x[:L]):
-            self[k] = x
+        for k, xi in zip(self.params, x[:L]):
+            self[k] = xi
         return x[L:]
 
     def flatten(self):
         res = []
         for k in self.params:
-            if type(self[k]) is Model:
+            if isinstance(self[k], Model):
                 res += self[k].flatten()
             else:
                 res.append(self[k])
@@ -43,8 +43,8 @@ class Model(dict):
     def get_bounds(self):
         res = []
         for k in self.params:
-            if type(self[k]) is Model:
+            if k in self.bounds:
+                res.append(self.bounds[k])
+            elif isinstance(self[k], Model):
                 res += self[k].get_bounds()
-            else:
-                res.append(self[k])
         return res

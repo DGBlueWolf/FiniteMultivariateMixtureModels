@@ -16,24 +16,31 @@ class DModel(Model):
         return gamma.logpdf(d, alpha, 0, beta)
 
     def grad_(d, *, alpha, beta, **_):
-        pass
+        return []
+
+    def construct(self, x):
+        return x
+
+    def flatten(self):
+        return []
 
     def optimize(self, data):
         totals = sum(wt * np.sum(dvsr['sr']) for dvsr, wt in data)
-        sx = sum(wt * np.sum(dvsr['sr'] * dvsr['d']) for dvsr, wt in data) / totals
-        slx = sum(wt * np.sum(dvsr['sr'] * log(dvsr['d'])) for dvsr, wt in data) / totals
-        sxlx = sum(wt * np.sum(dvsr['sr'] * dvsr['d'] * log(dvsr['d'])) for dvsr, wt in data) / totals
-        self['alpha'] = sx / (sxlx - slx * sx)
-        self['beta'] = sxlx - slx * sx
+        if totals > 0:
+            sx = sum(wt * np.sum(dvsr['sr'] * dvsr['d']) for dvsr, wt in data) / totals
+            slx = sum(wt * np.sum(dvsr['sr'] * log(dvsr['d'])) for dvsr, wt in data) / totals
+            sxlx = sum(wt * np.sum(dvsr['sr'] * dvsr['d'] * log(dvsr['d'])) for dvsr, wt in data) / totals
+            self['alpha'] = sx / (sxlx - slx * sx)
+            self['beta'] = sxlx - slx * sx
 
 
 class RVModel(Model):
     def initializer(self, *_, **__):
         self.params = ['r0', 'r1', 'r2']
         self.bounds = {
-            'r0': [0, 10],
-            'r1': [0, 10],
-            'r2': [0, 2]
+            'r0': (0, 0.5),
+            'r1': (0.01, 12),
+            'r2': (0.001, 2)
         }
         self['r0'] = np.random.uniform(0, 1)
         self['r1'] = np.random.uniform(1, 3)
@@ -53,9 +60,9 @@ class BVModel(Model):
     def initializer(self):
         self.params = ['b0', 'b1', 'b2']
         self.bounds = {
-            'b0': [0, 10],
-            'b1': [0, 10],
-            'b2': [0, 2]
+            'b0': (0.05, 10),
+            'b1': (0.01, 20),
+            'b2': (0.001, 2)
         }
         self['b0'] = np.random.uniform(2, 3.5)
         self['b1'] = np.random.uniform(1, 3)
@@ -75,10 +82,10 @@ class BVModel(Model):
 
 
 class VModel(Model):
-    def initializer(self, lr):
+    def initializer(self):
         self.params = ['ratio', 'beta']
-        self['ratio'] = RVModel(lr=lr)
-        self['beta'] = BVModel(lr=lr)
+        self['ratio'] = RVModel()
+        self['beta'] = BVModel()
 
     @staticmethod
     def eval_(d, v, *, ratio, beta):
@@ -122,14 +129,28 @@ class DVModel(Model):
 
         def f(x, data):
             cpy.construct(x)
-            return sum(wt * np.sum(dvsr['sr'] * cpy(dvsr['d'], dvsr['v'])) for dvsr, wt in data)
+            res = -sum(wt * np.sum(dvsr['sr'] * cpy(dvsr['d'], dvsr['v'])) for dvsr, wt in data)
+            return res
 
         def fprime(x, data):
             cpy.construct(x)
-            return sum(wt * np.sum(dvsr['sr'] * cpy.grad(dvsr['d'], dvsr['v'])) for dvsr, wt in data)
+            ans = []
+            calc = [list() for _ in range(len(x))]
+            for dvsr, wt in data:
+                g = cpy.grad(dvsr['d'], dvsr['v'])
+                for i in range(len(x)):
+                    calc[i].append(wt * np.sum(dvsr['sr'] * g[i]))
+
+            for i in range(len(x)):
+                ans.append(-sum(calc[i]))
+            return ans
 
         bounds = self.get_bounds()
-        result = fmin_slsqp(f, cpy.flatten(), bounds=bounds, fprime=fprime, args=[data], iter=10, full_output=True)
+        x0 = cpy.flatten()
+        print(f(x0, data))
+
+        result = fmin_slsqp(func=f, x0=x0, bounds=bounds, fprime=fprime, args=(data,), iter=10, full_output=True,
+                            iprint=0)
         xs, fun, its, status, message = result
 
         if status not in {0, 9}:

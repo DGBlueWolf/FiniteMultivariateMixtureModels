@@ -1,10 +1,9 @@
-import shelve
 import numpy as np
 from numpy import exp, log
 from src.compute.mdd.model import Model
 from scipy.stats import gamma
 from scipy.special import digamma
-from scipy.optimize import fmin_slsqp
+
 
 class DModel(Model):
     def initializer(self, lr):

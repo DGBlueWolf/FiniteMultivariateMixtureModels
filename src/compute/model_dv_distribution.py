@@ -17,15 +17,15 @@ minlog = np.exp(-40)
 data = {}
 
 
-def em(parts, max_iter=500, tol=1e-6, theta=0.1, lr=0.01, init_=None):
+def em(parts, max_iter=500, tol=1e-6, theta=0.1, init_=None):
     parts = parts[(parts['v'] > 0)]  # & (parts['v'] < 4) ]
     outtime = np.unique(parts['t'])
     meanchange = 0
 
     # parameters for the distribution model
-    mxmodel = [DVModel(lr=lr) for _ in range(config.n_feats)] \
+    mxmodel = [DVModel() for _ in range(config.n_feats)] \
         if init_ is None else \
-        [DVModel(init_[i], lr=lr) for i in range(config.n_feats)]
+        [DVModel(init_[i]) for i in range(config.n_feats)]
 
     # define a structure to hold the scores for each model in the mixture
 
@@ -66,28 +66,26 @@ def em(parts, max_iter=500, tol=1e-6, theta=0.1, lr=0.01, init_=None):
                     iterc + 1, max_iter, minute, len(outtime), plike, meanchange))
 
         for j in range(config.n_feats):
-            mxmodel[j].optimize(zip(bytime, group_scores[:, j]))
+            mxmodel[j].optimize(list(zip(bytime, group_scores[:, j])))
 
         change = plike and likelihood - plike
         meanchange *= (1 - theta)
         meanchange += theta * change
         if plike and exp(-(
-                    log(10) / (max_iter - iterc)) * meanchange / tsr.sum()) > 1 - tol:  # and (input("Ok? " ) == 'no'):
-            # pprint(mxmodel)
-            # plot( 'r1', mxmodel )
-            # if( input("Continue? ") == 'no' ):
+                    log(10) / (max_iter - iterc)) * meanchange / tsr.sum()) > 1 - tol:
             break
 
         plike = likelihood
-    return mxmodel, group_scores, tsr
+    return mxmodel, group_scores, tsr, outtime
 
 
 def reader(**kwargs):
     from src.compute.compress_particle_data import data as cpd
     data = globals()['data']
-    for e in events:
+    r_events = [x.strip() for x in input().split(',')]
+    for e in r_events:
         data[e] = {}
-        data[e]['params'], data[e]['group_scores'], data[e]['tsr'] = em(cpd[e][inkey], **kwargs)
+        data[e]['params'], data[e]['group_scores'], data[e]['tsr'], data[e]['outtime'] = em(cpd[e][inkey], **kwargs)
 
 
 def save():
@@ -98,11 +96,11 @@ def save():
 
 
 shelf = shelve.open(fconfig['shelves'][outkey])
-if not 'data' in shelf:
+if 'data' not in shelf:
     shelf.close()
     reader()
     save()
 else:
     data = shelf['data']
     shelf.close()
-del (shelf)
+del shelf
