@@ -1,24 +1,31 @@
 import shelve
+
 import numpy as np
 from IPython.display import clear_output
 from numpy import exp, log
-from numpy.random import permutation as permute
-from configs.file_locations import config as fconfig
+
 import configs.compute.model_dv_distribution as config
+from configs.file_locations import config as fconfig
 from configs.naming_conventions import config as names
 from src.compute.mdd.rbdvmodel_new import DVModel
+
+np.set_printoptions(precision=3, formatter={'float_kind': lambda x: "%.2f" % x})
 
 v_alpha_params = ['slope', 'scale', 'intercept']
 v_beta_params = ['slope', 'scale', 'intercept']
 inkey = 'compressed_pip_data'
 outkey = 'model_dv_distribution'
 events = names['events']
+rain_events = ['r1', 'r2', 'e1', 'e4', 'e5']
+snow_events = ['e2', 'e3', 'e6', 'e7', 'e8']
 minlog = np.exp(-40)
 data = {}
 
 
-def em(parts, max_iter=500, tol=1e-6, theta=0.1, init_=None):
-    parts = parts[(parts['v'] > 0)]  # & (parts['v'] < 4) ]
+def em(parts, max_iter=500, tol=1e-6, theta=0.1, init_=None, all_snow = False):
+    parts = parts[(parts['v'] > 0)]
+    if all_snow:
+        parts = parts[(parts['v'] < 4)]
     outtime = np.unique(parts['t'])
     meanchange = 0
 
@@ -50,7 +57,8 @@ def em(parts, max_iter=500, tol=1e-6, theta=0.1, init_=None):
         likelihood = 0
 
         # compute log scores and accumulate deltas
-        for minute, (i, ts) in enumerate(permute(list(enumerate(outtime))), 1):
+        for minute, (i, ts) in enumerate(sorted(list(enumerate(outtime)), key=lambda x: tuple(group_scores[x[0], :])),
+                                         1):
             log_score = np.zeros(config.n_feats, dtype='f8')
             d, v, sr = bytime[i]['d'], bytime[i]['v'], bytime[i]['sr']
 
@@ -58,12 +66,13 @@ def em(parts, max_iter=500, tol=1e-6, theta=0.1, init_=None):
                 log_score[j] = np.sum(sr * mxmodel[j](d, v))
 
             likelihood += log(exp(log_score).mean())
-            log_score -= log_score.mean()
-            group_scores[i, :] = np.exp(log_score) / np.exp(log_score).sum()
+            log_score -= max(log_score)
+            s = np.exp(log_score).sum()
+            group_scores[i, :] = 0.25 if np.isnan(s) or s < 1e-20 else np.exp(log_score) / s
             clear_output(wait=True)
             print(
-                "Computing scares... Iteration {}/{}. Minute {:4d}/{:4d}. Likelihood: {:10.6g} Mean Change: {:12.6g}".format(
-                    iterc + 1, max_iter, minute, len(outtime), plike, meanchange))
+                "Computing scares... Iteration {}/{}. Minute {:4d}/{:4d}. Likelihood: {:10.6g} Mean Change: {:12.6g}\nGroupScores: {}".format(
+                    iterc + 1, max_iter, minute, len(outtime), plike, meanchange, group_scores.sum(axis=0)))
 
         for j in range(config.n_feats):
             mxmodel[j].optimize(list(zip(bytime, group_scores[:, j])))
@@ -79,10 +88,10 @@ def em(parts, max_iter=500, tol=1e-6, theta=0.1, init_=None):
     return mxmodel, group_scores, tsr, outtime
 
 
-def reader(**kwargs):
+def reader(r_events, **kwargs):
     from src.compute.compress_particle_data import data as cpd
+    r_events = r_events or events
     data = globals()['data']
-    r_events = [x.strip() for x in input().split(',')]
     for e in r_events:
         data[e] = {}
         data[e]['params'], data[e]['group_scores'], data[e]['tsr'], data[e]['outtime'] = em(cpd[e][inkey], **kwargs)

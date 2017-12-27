@@ -1,9 +1,10 @@
 import numpy as np
 from numpy import exp, log
-from src.compute.mdd.model import Model
-from scipy.stats import gamma
-from scipy.special import digamma
 from scipy.optimize import fmin_slsqp
+from scipy.special import digamma
+from scipy.stats import gamma
+
+from src.compute.mdd.model import Model
 
 
 class DModel(Model):
@@ -30,16 +31,17 @@ class DModel(Model):
             sx = sum(wt * np.sum(dvsr['sr'] * dvsr['d']) for dvsr, wt in data) / totals
             slx = sum(wt * np.sum(dvsr['sr'] * log(dvsr['d'])) for dvsr, wt in data) / totals
             sxlx = sum(wt * np.sum(dvsr['sr'] * dvsr['d'] * log(dvsr['d'])) for dvsr, wt in data) / totals
-            self['alpha'] = sx / (sxlx - slx * sx)
-            self['beta'] = sxlx - slx * sx
+            if sxlx - slx * sx > 0:
+                self['beta'] = sxlx - slx * sx
+                self['alpha'] = sx / self['beta']
 
 
 class RVModel(Model):
     def initializer(self, *_, **__):
         self.params = ['r0', 'r1', 'r2']
         self.bounds = {
-            'r0': (0, 0.5),
-            'r1': (0.01, 12),
+            'r0': (0.001, 0.5),
+            'r1': (0.001, 12),
             'r2': (0.001, 2)
         }
         self['r0'] = np.random.uniform(0, 1)
@@ -61,7 +63,7 @@ class BVModel(Model):
         self.params = ['b0', 'b1', 'b2']
         self.bounds = {
             'b0': (0.05, 10),
-            'b1': (0.01, 20),
+            'b1': (0.001, 20),
             'b2': (0.001, 2)
         }
         self['b0'] = np.random.uniform(2, 3.5)

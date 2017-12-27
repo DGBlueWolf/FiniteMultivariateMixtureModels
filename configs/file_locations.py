@@ -18,6 +18,7 @@ config = {
         'readers': base.specfiles({
             'meta':                    'read_meta',
             'particle_density':        'read_particle_density',
+            'pip_rnr':                 'read_rnr',
             'rain_rate':               'read_rr',
             'snow_size_distribution':  'read_ssd',
             'velocity_distribution':   'read_vd',
@@ -38,6 +39,7 @@ config = {
     #shelf files for efficiently reloading data
     'shelves': base.specfiles({
         'meta':                     'meta',
+        'pip_rnr':                  'rnr',
         'snow_size_distribution':   'ssd',
         'velocity_distribution':    'vd',
         'rain_rate':                'rr',
@@ -93,7 +95,7 @@ config = {
 
     #Velocity Distribution
     'velocity_distribution':{
-        'shelf': home + 'data/shelves/velocity_distribution.shelf',
+        'shelf': home + 'data/shelves/vd.shelf',
         'dataformat':[
             (('Day','day'),'i4'),
             (('Minute','t'),'i4'),
@@ -115,7 +117,7 @@ config = {
 
     #pluvio snow water equivalent rate
     'rain_rate':{
-        'shelf': home + 'data/shelves/rain_rate.shelf',
+        'shelf': home + 'data/shelves/rr.shelf',
         'dataformat':[
             (('Day','day'),'i4'),
             (('Time','t'),'i4'),
@@ -134,6 +136,29 @@ config = {
             'e7': 'E7',
             'e8': 'E8',
         }, base = home + "data/rr/", ext = ".csv")
+    },
+
+    #pip rain vs non_rain rate
+    'pip_rnr':{
+        'shelf': home + 'data/shelves/rnr.shelf',
+        'dataformat':[
+            (('Day','day'),'i4'),
+            (('Time','t'),'i4'),
+            (('Rain rate','rr'),'f8'),
+            (('Non-rain rate','nr'),'f8'),
+        ],
+        'files': base.specfiles({
+            'r1': 'R1',
+            'e1': 'E1',
+            'e2': 'E2',
+            'e3': 'E3',
+            'r2': 'R2',
+            'e4': 'E4',
+            'e5': 'E5',
+            'e6': 'E6',
+            'e7': 'E7',
+            'e8': 'E8',
+        }, base = home + 'data/rnr/', ext = '.csv')
     },
 
     #particle density file locations
