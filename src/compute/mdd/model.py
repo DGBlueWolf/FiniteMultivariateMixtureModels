@@ -1,3 +1,6 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 class Model(dict):
     def initializer(self, **kwargs):
         raise NotImplementedError("Please Implement this method")
@@ -48,3 +51,10 @@ class Model(dict):
             elif isinstance(self[k], Model):
                 res += self[k].get_bounds()
         return res
+
+    def debug_plot(self):
+        v, d = np.mgrid[0.1:10:50j, 0.1:10:50j]
+        ans = self(d, v) / np.log(10)
+        fig = plt.figure()
+        plt.pcolormesh(d, v, ans, vmin=-4, vmax=0)
+        plt.show()
