@@ -1,5 +1,5 @@
 from utilities import base
-home = 'C:/Users/7110008/Documents/Employment/NASA Fall Internship/SnowDensityProject/'
+home = 'E:/dgfae/Documents/Research/ProbabilityDensityModelForFallingSnow/'
 config = {
     #readme locations
     'readme': base.specfiles({
@@ -48,6 +48,7 @@ config = {
         'computed_area_ratio':      'car',
         'compressed_particle_data': 'cpd',
         'model_dv_distribution':    'mdd',
+        'gamma_model_mixing_ratio': 'gmmr',
     }, base = home + 'data/shelves/' , ext = '.shelf'),
 
     #MetaData
@@ -203,6 +204,7 @@ config = {
                 (('Time','t'),'i4'),
                 (('Cluster Diameter','d'),'f8'),
                 (('Cluster Velocity','v'),'f8'),
+                (('Cluster Count','count'),'i4'),
                 (('Cluster SnowRate','sr'),'f8'),
                 (('Cluster Varaince','var'),'f8'),
             ],
